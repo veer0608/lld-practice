@@ -19,7 +19,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from app.config import DEFAULT_LEARNER, Settings, build_service
-from app.domain.attempt import Attempt
+from app.domain.attempt import Attempt, AttemptStatus
 from app.domain.errors import DomainError, IllegalTransition, InvalidSubmission, NotFound
 from app.services.practice import PracticeService
 
@@ -136,6 +136,7 @@ def _router() -> APIRouter:
         submission = build_submission(
             kind, design=design, trade_offs=trade_offs, notes=notes, text=text, code=code
         )
+        submission.validate()
         attempt = service.start_attempt(DEFAULT_LEARNER, problem_id)
         service.submit(attempt.id, submission)
         return RedirectResponse("/attempts/" + attempt.id, status_code=303)
@@ -157,7 +158,12 @@ def _router() -> APIRouter:
 
     @router.post("/attempts/{attempt_id}/retry")
     def retry(request: Request, attempt_id: str):
-        _service(request).retry_evaluation(attempt_id)
+        service = _service(request)
+        attempt = service.get_attempt(attempt_id)
+        if attempt.status is AttemptStatus.FAILED:
+            service.retry_evaluation(attempt_id)
+        elif attempt.status not in (AttemptStatus.EVALUATING, AttemptStatus.EVALUATED):
+            service.retry_evaluation(attempt_id)
         return RedirectResponse("/attempts/" + attempt_id, status_code=303)
 
     @router.get("/history", response_class=HTMLResponse)

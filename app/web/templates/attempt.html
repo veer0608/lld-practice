@@ -50,7 +50,7 @@
         <div class="spark">
           {% for score in progress %}<div style="height: {{ (score * 0.34)|round|int }}px" title="{{ score }}%"></div>{% endfor %}
         </div>
-        <span class="muted">attempts 1&ndash;{{ progress|length }}</span>
+        <span class="muted">{{ progress|length }} scored attempts</span>
       </div>
       {% endif %}
     </div>

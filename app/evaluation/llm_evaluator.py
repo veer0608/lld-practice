@@ -136,7 +136,7 @@ class LLMEvaluator(Evaluator):
             severity = self._severity(row.get("severity"))
             message = str(row.get("message", "")).strip()
             evidence = str(row.get("evidence", "")).strip()
-            if not message or dimension is None:
+            if not message or dimension is None or not evidence:
                 dropped += 1
                 continue
             if not self._evidence_supported(evidence, haystack):

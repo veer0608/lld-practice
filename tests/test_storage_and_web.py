@@ -165,3 +165,26 @@ def test_healthz_reports_which_evaluators_are_wired(client):
     body = client.get("/healthz").json()
     assert body["ok"] is True
     assert body["evaluators"]["required"] == ["rubric"]
+
+
+def test_rejected_http_submissions_do_not_consume_attempt_numbers(client):
+    design = (
+        "ParkingLot: owns floors and answers availability | is_full, park | Floor, SpotAllocator\n"
+        "Floor: holds the parking spots on one level | find_free_spot | ParkingSpot\n"
+        "ParkingSpot: one bay of a given size | occupy, release | Vehicle\n"
+        "Ticket: links vehicle, spot and entry time | issued_at | ParkingSpot\n"
+        "PricingStrategy: computes the fee from duration | fee_for | Ticket\n"
+    )
+    payload = {"kind": "design", "design": design, "trade_offs": "A central allocator is simpler."}
+
+    assert client.post("/problems/parking-lot/submit", data=payload, follow_redirects=False).status_code == 303
+    for _ in range(3):
+        assert client.post(
+            "/problems/parking-lot/submit",
+            data={"kind": "design", "design": "ParkingLot owns floors"},
+        ).status_code == 400
+    second = client.post("/problems/parking-lot/submit", data=payload, follow_redirects=False)
+
+    assert second.status_code == 303
+    assert client.get("/api" + second.headers["location"]).json()["attempt_no"] == 2
+    assert [a["attempt_no"] for a in client.get("/api/attempts").json()] == [2, 1]

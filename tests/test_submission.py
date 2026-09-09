@@ -73,3 +73,9 @@ def test_unparseable_code_falls_back_to_words_rather_than_failing():
     submission = CodeSubmission(source="class ParkingLot(:\n    def park(")
     assert submission.parse_error() is not None
     assert "parkinglot" in submission.symbols()
+
+
+def test_acronyms_are_kept_as_words_when_splitting_identifiers():
+    words = split_words("APIKey HTTPServer")
+    assert {"api", "key", "apikey", "http", "server", "httpserver"} <= words
+    assert not {"a", "i", "h", "t", "p"} & words

@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import ast
 import json
+import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any, ClassVar
@@ -120,19 +121,12 @@ def split_words(text: str) -> set[str]:
 
     # Case must survive until after the CamelCase split, or the split has
     # nothing to key on and "PricingStrategy" never matches "pricing strategy".
+    # Keep consecutive capitals together: APIKey becomes "api", "key", not
+    # "a", "p", "i", "key".
     out = {token.lower() for token in raw}
     for token in raw:
-        parts: list[str] = []
-        current = ""
-        for ch in token:
-            if ch.isupper() and current:
-                parts.append(current)
-                current = ch
-            else:
-                current += ch
-        if current:
-            parts.append(current)
-        out.update(p.lower() for p in parts if p)
+        parts = re.findall(r"[A-Z]+(?=[A-Z][a-z]|\d|$)|[A-Z]?[a-z]+|\d+", token)
+        out.update(part.lower() for part in parts)
     return out
 
 

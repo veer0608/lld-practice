@@ -72,7 +72,11 @@ class RubricEvaluator(Evaluator):
             for dim, rows in per_dimension.items()
         ]
 
-        gaps = sum(1 for i in items if i.severity is Severity.GAP)
+        gaps = sum(
+            1
+            for i in items
+            if i.criterion_id is not None and i.severity is Severity.GAP
+        )
         return Evaluation(
             items=items,
             scores=scores,

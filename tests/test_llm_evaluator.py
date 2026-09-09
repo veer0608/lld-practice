@@ -171,3 +171,27 @@ def test_a_daily_quota_body_is_recognised_but_a_per_minute_one_is_not():
     burst = '{"error":{"details":[{"quotaId":"GenerateRequestsPerMinutePerProject"}]}}'
     assert GeminiClient._is_daily_wall(daily) is True
     assert GeminiClient._is_daily_wall(burst) is False
+
+
+def test_observations_without_evidence_are_withheld(problem, good_design):
+    raw = response(
+        [
+            {
+                "dimension": "abstraction",
+                "severity": "gap",
+                "message": "Add a BillingLedger and KafkaBus.",
+                "evidence": "",
+            }
+        ]
+    )
+    result = LLMEvaluator(FakeClient(raw)).evaluate(problem, good_design)
+    assert result.items == []
+    assert "1 unsupported observation withheld" in result.summary
+
+
+def test_a_daily_quota_is_authoritative_when_the_body_also_mentions_rpm():
+    body = (
+        '{"error":{"details":[{"quotaId":"GenerateRequestsPerDayPerProject"},'
+        '{"help":"See GenerateRequestsPerMinutePerProject limits"}]}}'
+    )
+    assert GeminiClient._is_daily_wall(body) is True

@@ -171,3 +171,13 @@ def test_code_submissions_scope_to_class_definitions_not_method_names(problem):
 def test_a_gap_on_a_type_criterion_says_a_class_is_missing(problem, thin_design):
     pricing = next(i for i in evaluate(problem, thin_design).items if i.criterion_id == "pl-pricing")
     assert pricing.evidence.startswith("no class named")
+
+
+def test_summary_counts_only_missing_rubric_criteria(problem, thin_design):
+    result = evaluate(problem, thin_design)
+    required_gaps = [
+        item
+        for item in result.items
+        if item.criterion_id is not None and item.severity is Severity.GAP
+    ]
+    assert result.summary == f"{len(required_gaps)} required concepts missing from your design."

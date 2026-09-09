@@ -147,8 +147,7 @@ class GeminiClient:
     @staticmethod
     def _is_daily_wall(body: str) -> bool:
         per_day = re.search(r"PerDay|per day|requests per day|RPD", body, re.IGNORECASE)
-        per_minute = re.search(r"PerMinute|PerSecond|per minute|RPM", body, re.IGNORECASE)
-        return bool(per_day and not per_minute)
+        return bool(per_day)
 
     def _sleep(self, attempt: int) -> None:
         time.sleep(min(8.0, 1.5 * (2**attempt)) * (0.7 + random.random() * 0.6))
