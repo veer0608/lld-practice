@@ -8,7 +8,7 @@ Built for the CipherSchools 2-day engineering assignment.
 
 - [Research note](docs/RESEARCH.md) - the learner problem, what already exists, and where the gaps are
 - [Design note](docs/DESIGN.md) - MVP, class model, evaluation approach, trade-offs
-- [AI usage](AI_USAGE.md) - six decisions where AI and judgement diverged
+- [AI usage](AI_USAGE.md) - five decisions where AI and judgement diverged
 
 ## Run it
 

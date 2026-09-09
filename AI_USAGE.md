@@ -1,6 +1,6 @@
 # AI usage
 
-Built with Claude Code as a pair. Six decisions where the AI's suggestion and
+Built with Claude Code as a pair. Five decisions where the AI's suggestion and
 my judgement actually diverged, or where trusting it would have shipped a bug.
 
 ## 1. LLM-only feedback, rejected in favour of a required deterministic floor
@@ -72,66 +72,58 @@ quota failure, and `_is_daily_wall`, which branches on the response body rather
 than the status code, because a 429 covers both a per-minute burst worth waiting
 on and a per-day wall that is not. Both behaviours have tests.
 
-## 5. A failing test where the code was right and the test was wrong
+## 5. Not trusting a result that merely looked plausible
 
-**What happened.** `test_a_missing_required_concept_is_a_gap_not_a_suggestion`
-failed: it removed the `PricingStrategy` class from a fixture and expected the
-rubric to report a gap, but no gap appeared. The reflex, and the AI's first
-instinct, is to loosen the checker.
+Twice, the thing that caught a defect was refusing to accept a number or a
+failure that looked reasonable.
 
-**Actually.** Another class in the fixture still listed `PricingStrategy` as a
-collaborator. The submission genuinely did mention it, so the checker was
-correct and the fixture was incoherent. I fixed the test.
+**A failing test where the code was right.**
+`test_a_missing_required_concept_is_a_gap_not_a_suggestion` failed: it removed
+the `PricingStrategy` class from a fixture and expected a gap, and no gap
+appeared. The reflex, and the AI's first instinct, is to loosen the checker.
+In fact another class in the fixture still named `PricingStrategy` as a
+collaborator, so the submission did mention it and the checker was right. I
+fixed the test. A failing test is a hypothesis about the code, not a verdict on
+it, and the cheapest way to ruin an evaluator is to relax it whenever a test
+disagrees.
 
-**Why it is here.** A failing test is a hypothesis about the code, not a verdict
-on it, and the cheapest way to ruin an evaluator is to relax it every time a
-test disagrees.
+**A score that was merely plausible.** Parking Lot worked well, so it would have
+been reasonable to stop and write this up. Running the other two problems with a
+deliberately weak god-class design showed the rubrics did separate strong from
+weak, but not by enough: the weak Elevator scored 27% and the weak Vending
+Machine 20%.
 
-## 6. Running the other two problems, rather than assuming one generalises
-
-**The situation.** Parking Lot worked well: 73% for a design missing pricing,
-92% once it was added. It would have been reasonable to stop there and write the
-submission.
-
-**Ran the other two anyway**, with a deliberately weak god-class design as well
-as a strong one, to see whether the rubrics separated them. They did, but not
-by enough: the weak Elevator scored 27% and the weak Vending Machine 20%, which
-is too generous for designs with one class doing everything and no stated
-trade-off.
-
-**The cause was a real bug, not tuning.** Four criteria were being satisfied by
+The cause was a bug, not miscalibration. Four criteria were being satisfied by
 method names. `check_money` satisfied "money is a domain type". `get_change`
-satisfied "making change is its own responsibility". "Opens the doors"
-satisfied "the car has an explicit state". `up` and `down` in "goes up and
-down" satisfied "direction is modelled". Every one of them credited a god class
-for having modelled a concept it had not modelled at all.
+satisfied "making change is its own responsibility". "Opens the doors" satisfied
+"the car has an explicit state". `up` and `down` in "goes up and down" satisfied
+"direction is modelled". Every one credited a god class with modelling a concept
+it had not modelled.
 
-**Fixed at the model layer, not by editing keywords.** `RubricCriterion` now
-carries a `scope`. Criteria that are claims about a type existing match only
-against class and collaborator names, which `Submission.declared_types()`
-supplies and `CodeSubmission` reads from `ast.ClassDef`. Editing the keyword
-lists would have papered over the same bug in every future problem.
+Fixed at the model layer rather than by editing keywords: `RubricCriterion` now
+carries a `scope`, so criteria that are claims about a type existing match only
+class and collaborator names, which `Submission.declared_types()` supplies and
+`CodeSubmission` reads from `ast.ClassDef`. Rewriting the keyword lists would
+have left the same defect waiting in every future problem. Weak scores after the
+fix: 8%, 14%, 9%, with strong scores unchanged. Five regression tests pin the
+specific false positives.
 
-Weak scores after the fix: 8%, 14%, 9%. Strong scores unchanged or slightly
-higher. Five regression tests pin the specific false positives.
+**Why it is here.** The AI wrote those rubrics and they read as perfectly
+sensible. Both defects were visible only by running adversarial input and being
+suspicious of output that was plausible rather than verified. The same
+discipline later found three more, all now fixed and pinned by tests: a headline
+score that blended a coverage fraction with a model judgement into a number that
+was neither, a merge that silently discarded the rubric's summary whenever the
+model succeeded, and a fourth submission format that registered correctly and
+then received no structural checks at all.
 
-**Why it is here.** The AI wrote the original rubrics and they read as
-perfectly sensible. The defect was only visible by running an adversarial input
-through all three problems and being suspicious of a number that was merely
-plausible.
+## Where AI did the most work, and where it needed the least argument
 
-## Two skills written for this repo
+Boilerplate and volume: the SQLite mapper, the templates and CSS, the `__init__`
+plumbing, and the first draft of the rubric keywords, which I then edited heavily
+to accept synonyms. It wrote most of the lines and I made most of the decisions.
 
-`.claude/skills/domain-design` and `.claude/skills/lld-evaluator` encode the
-rules above so the next session enforces them instead of rediscovering them:
-the layering rule, where behaviour goes, the deterministic-versus-judgement
-split, and the evidence requirement. Written after the code, from what the
-build actually taught, rather than as speculation up front.
-
-## Where AI did the most work with the least argument
-
-Boilerplate and volume: the SQLite mapper, the Jinja templates and CSS, the
-`__init__` plumbing, and the first draft of the problem catalogue's rubric
-keywords, which I then edited heavily to accept synonyms. Roughly speaking it
-wrote most of the lines and I made most of the decisions, which is the split
-that seemed to produce good code rather than a lot of it.
+Two repo skills, `.claude/skills/domain-design` and `.claude/skills/lld-evaluator`,
+encode the rules the build actually taught so a later session enforces them
+rather than rediscovering them: the layering rule, where behaviour goes, the
+deterministic-versus-judgement split, and the evidence requirement.
