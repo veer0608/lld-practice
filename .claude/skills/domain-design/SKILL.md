@@ -52,7 +52,10 @@ Ask, in this order:
 A new class is justified when it removes a branch, not when it adds a noun.
 
 - `Submission` subclasses exist because every evaluator would otherwise carry
-  the same `if format == "code"` ladder. Three formats, one dispatch.
+  the same `if format == "code"` ladder. Three formats, one dispatch. The
+  behaviour that makes this pay is `structural_notes()`: each format reports
+  what can be checked about its own shape, so no evaluator switches on a
+  concrete submission type. Do not reintroduce that switch.
 - `Dimension` is an enum rather than a string because deterministic and model
   feedback have to be mergeable, and that only works if both speak one closed
   vocabulary.

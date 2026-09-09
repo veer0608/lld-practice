@@ -47,6 +47,16 @@ critique for slightly more feedback. Do not do it without a measurement.
 the UI on purpose. A learner should weight a mechanical check and a model's
 opinion differently, and can only do that if they can tell them apart.
 
+## Structural checks live on the submission, not here
+
+Anything checkable from a submission's own shape belongs in that subclass's
+`structural_notes()`, never in an evaluator. No evaluator may switch on a
+submission's concrete type. It was an `isinstance` ladder once, and the cost was
+that a new format registered fine and then received no checks, silently.
+
+An evaluator surfacing these stamps its own `source` on them, because a learner
+needs to know who is making the claim.
+
 ## Adding a new evaluator
 
 1. Subclass `Evaluator`, set `name`, implement `evaluate`.

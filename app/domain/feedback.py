@@ -115,7 +115,11 @@ class Evaluation:
         return Evaluation(
             items=self.items + other.items,
             scores=merged_scores,
-            summary=other.summary or self.summary,
+            # Both summaries, in merge order, so the deterministic one comes
+            # first. Taking only the later one meant the rubric's line was
+            # discarded on every run where the model succeeded, which is to say
+            # the reproducible half was suppressed by the unreproducible half.
+            summary=" ".join(s for s in (self.summary, other.summary) if s),
             sources=self.sources + other.sources,
             degraded=self.degraded or other.degraded,
             degraded_reason="; ".join(

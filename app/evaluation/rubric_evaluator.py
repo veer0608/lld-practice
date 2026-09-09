@@ -6,9 +6,9 @@ What is checkable without a model is narrow but genuinely reliable:
   the criterion is a claim about a type existing, did they name a *class* for
   it rather than a method,
 * did they say what each class is responsible for,
-* did they state a trade-off at all,
-* does the submission parse, if it is code,
-* and a crude god-class signal: one class holding most of the methods.
+* and whatever the submission format itself can check about its own shape,
+  which it reports through `structural_notes` rather than being switched on
+  here: a stated trade-off, a parse error, a god class, an orphan.
 
 Every finding here cites the learner's own symbol as evidence, and every one
 is reproducible - the same submission scores the same tomorrow, with no API
@@ -24,15 +24,13 @@ from __future__ import annotations
 
 import time
 from collections import defaultdict
+from dataclasses import replace
 
 from app.domain.feedback import DimensionScore, Evaluation, FeedbackItem, Severity
 from app.domain.problem import Dimension, MatchScope, Problem, RubricCriterion
-from app.domain.submission import CodeSubmission, DesignSubmission, Submission, TextSubmission
+from app.domain.submission import Submission
 
 from .evaluator import Evaluator
-
-GOD_CLASS_SHARE = 0.6
-MIN_CLASSES_FOR_GOD_CHECK = 3
 
 
 class RubricEvaluator(Evaluator):
@@ -56,7 +54,12 @@ class RubricEvaluator(Evaluator):
             per_dimension[criterion.dimension].append((criterion.weight, met))
             items.append(self._item_for(criterion, met, words))
 
-        items.extend(self._structural_checks(submission))
+        # Each format knows what can be checked about its own shape. Asking the
+        # submission rather than switching on its type is what makes "a new
+        # format needs no evaluator change" true instead of aspirational.
+        items.extend(
+            replace(note, source=self.name) for note in submission.structural_notes()
+        )
 
         scores = [
             DimensionScore(
@@ -127,111 +130,6 @@ class RubricEvaluator(Evaluator):
             source=self.name,
             criterion_id=criterion.id,
         )
-
-    def _structural_checks(self, submission: Submission) -> list[FeedbackItem]:
-        """Format-specific checks that need no rubric.
-
-        Each branch reads the submission through its own type rather than
-        through a flag on a single blob, which is the point of having distinct
-        Submission subclasses at all.
-        """
-        items: list[FeedbackItem] = []
-
-        if isinstance(submission, DesignSubmission):
-            if not submission.trade_offs.strip():
-                items.append(
-                    FeedbackItem(
-                        dimension=Dimension.TRADE_OFFS,
-                        severity=Severity.GAP,
-                        message=(
-                            "No trade-off stated. Any LLD answer that could not have "
-                            "gone another way is not a design decision yet."
-                        ),
-                        source=self.name,
-                    )
-                )
-            items.extend(self._god_class_check(submission))
-            items.extend(self._orphan_check(submission))
-
-        elif isinstance(submission, CodeSubmission):
-            error = submission.parse_error()
-            if error:
-                items.append(
-                    FeedbackItem(
-                        dimension=Dimension.ABSTRACTION,
-                        severity=Severity.SUGGESTION,
-                        message=(
-                            "Your code did not parse, so structural checks fell back to "
-                            "plain text matching and may be less accurate."
-                        ),
-                        evidence=error,
-                        source=self.name,
-                    )
-                )
-
-        elif isinstance(submission, TextSubmission):
-            items.append(
-                FeedbackItem(
-                    dimension=Dimension.RESPONSIBILITY,
-                    severity=Severity.SUGGESTION,
-                    message=(
-                        "Prose submissions can only be checked shallowly. Re-submitting "
-                        "as a class design gets you responsibility-level feedback."
-                    ),
-                    source=self.name,
-                )
-            )
-
-        return items
-
-    def _god_class_check(self, submission: DesignSubmission) -> list[FeedbackItem]:
-        total = sum(len(c.methods) for c in submission.classes)
-        if total < 4 or len(submission.classes) < MIN_CLASSES_FOR_GOD_CHECK:
-            return []
-        biggest = max(submission.classes, key=lambda c: len(c.methods))
-        share = len(biggest.methods) / total
-        if share < GOD_CLASS_SHARE:
-            return []
-        return [
-            FeedbackItem(
-                dimension=Dimension.RESPONSIBILITY,
-                severity=Severity.SUGGESTION,
-                message=(
-                    biggest.name
-                    + " holds most of the behaviour in your design. Check whether it is "
-                    "coordinating or actually doing the work itself."
-                ),
-                evidence="{} of {} methods ({}%) sit on {}".format(
-                    len(biggest.methods), total, round(share * 100), biggest.name
-                ),
-                source=self.name,
-            )
-        ]
-
-    def _orphan_check(self, submission: DesignSubmission) -> list[FeedbackItem]:
-        """Classes nobody collaborates with and which collaborate with nobody."""
-        if len(submission.classes) < MIN_CLASSES_FOR_GOD_CHECK:
-            return []
-        named = {c.lower() for cls in submission.classes for c in cls.collaborators}
-        orphans = [
-            c.name
-            for c in submission.classes
-            if not c.collaborators and c.name.lower() not in named
-        ]
-        if not orphans:
-            return []
-        return [
-            FeedbackItem(
-                dimension=Dimension.RELATIONSHIPS,
-                severity=Severity.SUGGESTION,
-                message=(
-                    "These classes are not connected to anything: "
-                    + ", ".join(sorted(orphans))
-                    + ". Say who calls them, or drop them."
-                ),
-                source=self.name,
-            )
-        ]
 
     @staticmethod
     def _summary(gaps: int, total: int) -> str:

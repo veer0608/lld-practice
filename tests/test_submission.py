@@ -79,3 +79,63 @@ def test_acronyms_are_kept_as_words_when_splitting_identifiers():
     words = split_words("APIKey HTTPServer")
     assert {"api", "key", "apikey", "http", "server", "httpserver"} <= words
     assert not {"a", "i", "h", "t", "p"} & words
+
+
+# -- structural notes belong to the format, not to the evaluator --------------
+
+
+def test_a_new_format_gets_its_structural_notes_with_no_evaluator_change():
+    """The extensibility claim, as a test rather than a sentence in a doc.
+
+    This used to be false and silently so: RubricEvaluator switched on the three
+    known subclasses, and a fourth registered fine, then received no structural
+    checks at all with nothing to signal it.
+    """
+    from app.content.problems import PARKING_LOT
+    from app.domain.feedback import FeedbackItem, Severity
+    from app.domain.problem import Dimension
+    from app.evaluation.rubric_evaluator import RubricEvaluator
+
+    class DiagramSubmission(Submission):
+        kind = "diagram-test"
+
+        def __init__(self, src: str) -> None:
+            self.src = src
+
+        def render_for_evaluation(self) -> str:
+            return self.src
+
+        def symbols(self):
+            return split_words(self.src)
+
+        def to_payload(self):
+            return {"src": self.src}
+
+        @classmethod
+        def from_payload(cls, payload):
+            return cls(payload["src"])
+
+        def structural_notes(self):
+            if "-->" in self.src:
+                return []
+            return [
+                FeedbackItem(
+                    dimension=Dimension.RELATIONSHIPS,
+                    severity=Severity.GAP,
+                    message="No arrows in your diagram, so no relationships are stated.",
+                )
+            ]
+
+    result = RubricEvaluator().evaluate(PARKING_LOT, DiagramSubmission("ParkingLot Floor " * 20))
+    notes = [i for i in result.items if i.criterion_id is None]
+    assert [n.message for n in notes] == [
+        "No arrows in your diagram, so no relationships are stated."
+    ]
+    # The evaluator that surfaced it stamps its own name, so a learner can tell
+    # who is making the claim.
+    assert notes[0].source == "rubric"
+
+
+def test_a_format_with_nothing_to_check_returns_no_notes():
+    assert TextSubmission(text="x").structural_notes()  # prose always warns
+    assert CodeSubmission(source="class A:\n    pass\n").structural_notes() == []

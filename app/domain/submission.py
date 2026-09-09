@@ -27,8 +27,14 @@ from dataclasses import dataclass, field
 from typing import Any, ClassVar
 
 from .errors import InvalidSubmission
+from .feedback import FeedbackItem, Severity
+from .problem import Dimension
 
 MIN_TEXT_CHARS = 120
+
+# One class holding this share of the methods reads as a god class.
+GOD_CLASS_SHARE = 0.6
+MIN_CLASSES_FOR_STRUCTURE = 3
 
 
 class Submission(ABC):
@@ -49,6 +55,24 @@ class Submission(ABC):
     @abstractmethod
     def symbols(self) -> set[str]:
         """Lowercased identifiers and words the learner used."""
+
+    def structural_notes(self) -> list[FeedbackItem]:
+        """Findings that need no rubric, only this format's own structure.
+
+        Each format knows what can be checked about its own shape: a design
+        knows what a god class looks like, code knows whether it parses, prose
+        knows it cannot be checked deeply. An evaluator asks and does not care
+        which format answered.
+
+        This used to be an isinstance ladder inside RubricEvaluator, which made
+        the documented promise - a new format is one subclass and no evaluator
+        change - quietly false: a fourth format registered fine and then
+        received no structural checks at all, with nothing to signal it.
+
+        `source` is left unset. The evaluator that surfaces these stamps its own
+        name on them, because the learner needs to know who is making the claim.
+        """
+        return []
 
     def declared_types(self) -> set[str]:
         """Lowercased tokens from the types the learner actually declared.
@@ -143,6 +167,18 @@ class TextSubmission(Submission):
     def symbols(self) -> set[str]:
         return split_words(self.text)
 
+    def structural_notes(self) -> list[FeedbackItem]:
+        return [
+            FeedbackItem(
+                dimension=Dimension.RESPONSIBILITY,
+                severity=Severity.SUGGESTION,
+                message=(
+                    "Prose submissions can only be checked shallowly. Re-submitting "
+                    "as a class design gets you responsibility-level feedback."
+                ),
+            )
+        ]
+
     def to_payload(self) -> dict[str, Any]:
         return {"text": self.text}
 
@@ -203,6 +239,69 @@ class DesignSubmission(Submission):
         names = [c.name for c in self.classes]
         names += [collab for c in self.classes for collab in c.collaborators]
         return split_words(" ".join(names))
+
+    def structural_notes(self) -> list[FeedbackItem]:
+        notes: list[FeedbackItem] = []
+        if not self.trade_offs.strip():
+            notes.append(
+                FeedbackItem(
+                    dimension=Dimension.TRADE_OFFS,
+                    severity=Severity.GAP,
+                    message=(
+                        "No trade-off stated. Any LLD answer that could not have "
+                        "gone another way is not a design decision yet."
+                    ),
+                )
+            )
+        notes.extend(self._god_class_note())
+        notes.extend(self._orphan_note())
+        return notes
+
+    def _god_class_note(self) -> list[FeedbackItem]:
+        total = sum(len(c.methods) for c in self.classes)
+        if total < 4 or len(self.classes) < MIN_CLASSES_FOR_STRUCTURE:
+            return []
+        biggest = max(self.classes, key=lambda c: len(c.methods))
+        share = len(biggest.methods) / total
+        if share < GOD_CLASS_SHARE:
+            return []
+        return [
+            FeedbackItem(
+                dimension=Dimension.RESPONSIBILITY,
+                severity=Severity.SUGGESTION,
+                message=(
+                    biggest.name
+                    + " holds most of the behaviour in your design. Check whether it is "
+                    "coordinating or actually doing the work itself."
+                ),
+                evidence="{} of {} methods ({}%) sit on {}".format(
+                    len(biggest.methods), total, round(share * 100), biggest.name
+                ),
+            )
+        ]
+
+    def _orphan_note(self) -> list[FeedbackItem]:
+        """Classes nobody collaborates with and which collaborate with nobody."""
+        if len(self.classes) < MIN_CLASSES_FOR_STRUCTURE:
+            return []
+        named = {c.lower() for cls in self.classes for c in cls.collaborators}
+        orphans = [
+            c.name for c in self.classes
+            if not c.collaborators and c.name.lower() not in named
+        ]
+        if not orphans:
+            return []
+        return [
+            FeedbackItem(
+                dimension=Dimension.RELATIONSHIPS,
+                severity=Severity.SUGGESTION,
+                message=(
+                    "These classes are not connected to anything: "
+                    + ", ".join(sorted(orphans))
+                    + ". Say who calls them, or drop them."
+                ),
+            )
+        ]
 
     def validate(self) -> None:
         if not self.classes:
@@ -306,6 +405,22 @@ class CodeSubmission(Submission):
                 names.append(node.name)
                 names += [b.id for b in node.bases if isinstance(b, ast.Name)]
         return split_words(" ".join(names))
+
+    def structural_notes(self) -> list[FeedbackItem]:
+        error = self.parse_error()
+        if not error:
+            return []
+        return [
+            FeedbackItem(
+                dimension=Dimension.ABSTRACTION,
+                severity=Severity.SUGGESTION,
+                message=(
+                    "Your code did not parse, so structural checks fell back to "
+                    "plain text matching and may be less accurate."
+                ),
+                evidence=error,
+            )
+        ]
 
     def to_payload(self) -> dict[str, Any]:
         return {"source": self.source, "language": self.language}

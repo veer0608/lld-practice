@@ -76,11 +76,20 @@ Four seams carry the whole design.
 **`Submission`** answers the first design question: *what must a learner
 provide for an attempt to be meaningful?* The commitment is named classes,
 a stated responsibility each, stated collaborators, and the trade-off they
-knowingly made. Every subclass exposes exactly two views, and evaluators depend
-on those and nothing else:
+knowingly made. Every subclass exposes three things, and evaluators depend on
+those and nothing else:
 
 - `render_for_evaluation()`, a flat text view, for the model
-- `symbols()`, the identifiers the learner actually named, for the checker
+- `symbols()` and `declared_types()`, the words and the type names, for the checker
+- `structural_notes()`, whatever the format can check about its own shape
+
+That last one is why the extensibility claim below is true rather than
+aspirational. It began as an `isinstance` ladder inside `RubricEvaluator`, which
+meant a fourth format registered correctly and then silently received no
+structural checks at all. A design knows what a god class looks like; code knows
+whether it parses; prose knows it cannot be checked deeply. The evaluator asks
+and does not care which format answered, stamping its own name on what comes
+back so the learner still knows who is making the claim.
 
 `CodeSubmission.symbols()` walks the Python AST rather than matching words, so
 a class mentioned only in a comment does not satisfy a rubric criterion. That
@@ -204,7 +213,7 @@ The fifth design question. Three concrete extensions, with the actual diff size:
 
 | Extension | What changes |
 |---|---|
-| A diagram submission format (Mermaid, PlantUML) | One `Submission` subclass implementing `render_for_evaluation` and `symbols`, plus one branch in `web/forms.py`. Zero evaluator changes. |
+| A diagram submission format (Mermaid, PlantUML) | One `Submission` subclass, plus one branch in `web/forms.py` because the form must know which fields to read. Zero evaluator changes, and there is a test that asserts exactly that by defining a fourth format and running it through `RubricEvaluator`. |
 | A different evaluation strategy (static analysis, a peer review queue, a second model) | One `Evaluator` subclass, one line in `config.build_evaluator`. It joins the merge automatically. |
 | Postgres instead of SQLite | One `AttemptRepository` implementation. The domain, services and web layers do not compile-time depend on sqlite3 at all. |
 

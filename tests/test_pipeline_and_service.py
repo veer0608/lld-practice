@@ -247,3 +247,16 @@ def test_turning_the_model_off_deliberately_is_not_a_degradation(problem, good_d
     result = build_evaluator(use_llm=False).evaluate(problem, good_design)
     assert result.degraded is False
     assert result.sources == ["rubric"]
+
+
+def test_the_rubric_summary_survives_a_successful_model_run(problem, thin_design):
+    """Taking only the later summary discarded the deterministic one every time.
+
+    The reproducible half must not be suppressed by the unreproducible half.
+    """
+    merged = EvaluationPipeline(
+        required=[RubricEvaluator()], optional=[StubEvaluator()]
+    ).evaluate(problem, thin_design)
+
+    assert "missing from your design" in merged.summary  # the rubric's line
+    assert "stub summary" in merged.summary  # and the model's
