@@ -140,7 +140,7 @@ judgement and gets a model.
 fails the attempt; an optional one failing degrades it with a reason shown. A
 learner never watches a spinner that ends in nothing.
 
-**Model observations must be grounded in the submission's own vocabulary.** `_evidence_supported` drops any item whose quoted evidence does not sufficiently overlap the words the learner actually wrote, and reports the withheld count. It reliably catches critique of classes the learner never named, which is the common failure. It is a word-overlap test rather than a substring match, so a fabricated sentence assembled from the learner's own vocabulary can still pass. Substring matching against the rendered submission would close that, and is the next thing to change here.
+**Model observations must be grounded in the submission's own vocabulary.** `_evidence_supported` drops any item whose quoted evidence does not sufficiently overlap the words the learner actually wrote, and reports the withheld count. It reliably catches critique of classes the learner never named, which is the common failure. It is a word-overlap test rather than a substring match, so a fabricated sentence assembled from the learner's own vocabulary can still pass, and a quote of fewer than three significant words is waved through unchecked on the grounds that it carries no signal either way. Substring matching against the rendered submission would close both, and is the next thing to change here.
 
 **Evaluation is off the request thread.** `EVALUATING` is a persisted state, not
 the duration of an HTTP request, so the page is safe to leave. A failed
