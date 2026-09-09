@@ -90,7 +90,6 @@ class Problem:
     statement: str
     requirements: tuple[str, ...]
     rubric: tuple[RubricCriterion, ...]
-    reference_notes: str = ""
     tags: tuple[str, ...] = field(default_factory=tuple)
 
     def criterion(self, criterion_id: str) -> RubricCriterion:

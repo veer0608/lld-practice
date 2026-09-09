@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import pytest
+
+NL = chr(10)
 from fastapi.testclient import TestClient
 
 from app.domain.attempt import AttemptStatus
@@ -142,6 +144,55 @@ def test_a_bad_design_line_returns_400_with_the_reason(client):
     assert "Line 1" in response.text
 
 
+def test_a_rejected_submission_gives_the_work_back(client):
+    """The practice loop's own failure mode.
+
+    Mistyping one line of the design format is the likeliest way to be refused,
+    and sending a bare error page for it means a learner loses everything they
+    typed. The spec's Practice row is "a learner can start an attempt and work on
+    a solution", which a page that discards the solution does not satisfy.
+    """
+    design = NL.join([
+        "ParkingLot owns floors and answers availability",
+        "Floor: holds the parking spots on one level | find_free_spot | ParkingSpot",
+    ])
+    trade_offs = "One central allocator: simpler, but a single point of contention."
+    response = client.post(
+        "/problems/parking-lot/submit",
+        data={"kind": "design", "design": design, "trade_offs": trade_offs},
+    )
+    assert response.status_code == 400
+    # The reason, on the form rather than on an error page.
+    assert "Line 1" in response.text
+    assert "Submit for feedback" in response.text
+    # And every character of the work still there.
+    assert "Floor: holds the parking spots on one level" in response.text
+    assert trade_offs in response.text
+
+
+def test_a_rejected_code_submission_comes_back_on_the_code_pane(client):
+    response = client.post(
+        "/problems/parking-lot/submit", data={"kind": "code", "code": "   "}
+    )
+    assert response.status_code == 400
+    # The pane the learner was using is the one shown, not the design default.
+    assert 'id="pane-code"' in response.text
+    assert 'id="pane-code" hidden' not in response.text
+
+
+def test_a_valid_submission_is_unaffected(client):
+    design = NL.join([
+        "ParkingLot: owns floors and answers availability | is_full, park | Floor",
+        "Floor: holds the parking spots on one level | find_free_spot | ParkingSpot",
+    ])
+    response = client.post(
+        "/problems/parking-lot/submit",
+        data={"kind": "design", "design": design, "trade_offs": "Central allocator."},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+
+
 def test_a_design_with_no_responsibilities_is_refused(client):
     response = client.post(
         "/problems/parking-lot/submit",
@@ -188,3 +239,23 @@ def test_rejected_http_submissions_do_not_consume_attempt_numbers(client):
     assert second.status_code == 303
     assert client.get("/api" + second.headers["location"]).json()["attempt_no"] == 2
     assert [a["attempt_no"] for a in client.get("/api/attempts").json()] == [2, 1]
+
+
+def test_a_mistyped_design_line_does_not_discard_the_learners_work(client):
+    """The likeliest way to reach the error path must not cost the design.
+
+    This raises from build_submission during parsing, not from validate(), so
+    it only stays on the form if the guard wraps parsing as well.
+    """
+    response = client.post(
+        "/problems/parking-lot/submit",
+        data={
+            "kind": "design",
+            "design": "ParkingLot owns floors",
+            "trade_offs": "one central allocator, simpler but contended",
+        },
+    )
+    assert response.status_code == 400
+    assert "Line 1" in response.text
+    assert "ParkingLot owns floors" in response.text
+    assert "one central allocator, simpler but contended" in response.text

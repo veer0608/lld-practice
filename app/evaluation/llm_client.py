@@ -9,9 +9,11 @@ Two hard-won rules are baked in, both about free-tier quota:
   newest model carries the smallest allowance, so the same code can lose most
   of its daily budget overnight with no change on our side.
 * a 429 covers two unrelated things. A per-minute burst clears in seconds; a
-  per-day ceiling does not clear until tomorrow. Branch on what the body says,
-  never on the status code, or a run either sleeps through a wall or abandons
-  itself over a blip.
+  per-day ceiling does not clear until tomorrow. So the branch reads the body,
+  never the status code alone. It is deliberately asymmetric: only a body that
+  names a per-day quota is treated as a wall and moves to the next model.
+  Anything else, including a 429 that names no quota at all, is retried, because
+  waiting a few seconds to find out is cheaper than abandoning a run over a blip.
 """
 
 from __future__ import annotations

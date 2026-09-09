@@ -97,11 +97,6 @@ PARKING_LOT = Problem(
             scope=MatchScope.TYPE_NAME,
         ),
     ),
-    reference_notes=(
-        "The decision that separates a strong answer here is where the fee is computed. "
-        "A `calculate_fee` method on ParkingLot works today and has to be reopened for "
-        "every new rule."
-    ),
 )
 
 ELEVATOR = Problem(
@@ -179,10 +174,6 @@ ELEVATOR = Problem(
             keywords=("door", "doors"),
         ),
     ),
-    reference_notes=(
-        "The common miss is a single Elevator class that both moves itself and chooses "
-        "which requests to take, which makes any new dispatch rule a rewrite."
-    ),
 )
 
 VENDING_MACHINE = Problem(
@@ -251,10 +242,6 @@ VENDING_MACHINE = Problem(
             keywords=("transaction", "purchase", "session", "order"),
             scope=MatchScope.TYPE_NAME,
         ),
-    ),
-    reference_notes=(
-        "Strong answers make the illegal orderings impossible to express. Weak ones "
-        "check a boolean at the top of every method."
     ),
 )
 

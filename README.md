@@ -140,9 +140,7 @@ judgement and gets a model.
 fails the attempt; an optional one failing degrades it with a reason shown. A
 learner never watches a spinner that ends in nothing.
 
-**Every model observation must quote the submission**, and ones whose quote is
-not found there are dropped before the learner sees them, with the withheld
-count reported.
+**Model observations must be grounded in the submission's own vocabulary.** `_evidence_supported` drops any item whose quoted evidence does not sufficiently overlap the words the learner actually wrote, and reports the withheld count. It reliably catches critique of classes the learner never named, which is the common failure. It is a word-overlap test rather than a substring match, so a fabricated sentence assembled from the learner's own vocabulary can still pass. Substring matching against the rendered submission would close that, and is the next thing to change here.
 
 **Evaluation is off the request thread.** `EVALUATING` is a persisted state, not
 the duration of an HTTP request, so the page is safe to leave. A failed
@@ -161,3 +159,18 @@ evaluation keeps the submission and offers a retry that costs nothing.
 - **The rubric was written by me**, not validated against how experienced
   reviewers actually grade. That is the first thing worth measuring.
 - **No problem authoring UI.** Problems are data in `app/content/problems.py`.
+- **The rubric half is gameable.** A design that names every rubric keyword as a
+  class scores 100% on the deterministic half with nonsense responsibilities.
+  Keyword presence is evidence of coverage, never of quality, and only the model
+  half reads what the responsibilities actually say.
+- **Prose submissions bypass the `TYPE_NAME` scope.** `TextSubmission` cannot
+  tell a type from a verb, so `declared_types()` falls back to every word and a
+  paragraph mentioning the right nouns scores far higher than it should. Design
+  and code submissions are unaffected.
+- **The god-class check needs listed methods.** Omitting the methods column
+  silences it, because it measures method distribution and has nothing to count.
+- **Scores drift by a few points between runs.** The rubric half is exactly
+  reproducible; the model half is not. Measured on one unchanged submission:
+  rubric 90% every time, merged score between 82% and 87% across four runs. A
+  19-point improvement is real signal, a 3-point one is not distinguishable from
+  noise, and the sparkline does not currently say so.

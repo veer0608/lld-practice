@@ -135,11 +135,16 @@ The second design question. Four mechanisms, all in the code:
 1. **Never say correct.** Feedback is an observation, a dimension, a severity
    and a quote. There is no reference solution in the codebase to compare
    against, deliberately.
-2. **Evidence is mandatory and verified.** Every rubric item cites the learner's
-   own symbol. Every model item must quote the submission, and
-   `LLMEvaluator._evidence_supported` drops the ones that do not, showing the
-   withheld count. This is the cheapest defence against invented critique, and
-   it runs on our side rather than trusting the model.
+2. **Evidence is mandatory and checked.** Every rubric item cites the learner's
+   own symbol. Every model item must carry a quote, and
+   `LLMEvaluator._evidence_supported` drops items whose quote does not
+   sufficiently overlap the learner's own vocabulary, showing the withheld
+   count. This runs on our side rather than trusting the model, and it reliably
+   catches critique of classes the learner never named. Being honest about its
+   limit: it compares bags of words, not substrings, so a fabricated sentence
+   built from the learner's own vocabulary can pass, and quotes under three
+   significant words are waved through. Substring matching against
+   `render_for_evaluation()` would close both, and is the next change here.
 3. **Synonyms count.** `spot`, `slot`, `bay` and `space` satisfy one criterion.
    Multi-word keywords need every word, so `parking` alone does not earn
    `parking spot`. Penalising vocabulary rather than modelling is the failure

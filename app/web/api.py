@@ -118,6 +118,9 @@ def _router() -> APIRouter:
                 "problem": problem,
                 "history": service.history(DEFAULT_LEARNER, problem_id),
                 "progress": service.progress(DEFAULT_LEARNER, problem_id),
+                "error": None,
+                "kind": "design",
+                "submitted": {},
             },
         )
 
@@ -133,10 +136,38 @@ def _router() -> APIRouter:
         code: str = Form(""),
     ):
         service = _service(request)
-        submission = build_submission(
-            kind, design=design, trade_offs=trade_offs, notes=notes, text=text, code=code
-        )
-        submission.validate()
+        submitted = {
+            "design": design,
+            "trade_offs": trade_offs,
+            "notes": notes,
+            "text": text,
+            "code": code,
+        }
+        try:
+            # Parsing has to sit inside the guard too. A mistyped design line
+            # raises from build_submission, not from validate(), and that is the
+            # likeliest way a learner reaches this path at all.
+            submission = build_submission(kind, **submitted)
+            submission.validate()
+        except InvalidSubmission as exc:
+            # Back to the form with the work still in it. The generic error page
+            # loses everything the learner typed, and mistyping one line of the
+            # design format is the most likely way to reach here, so the page that
+            # punishes a typo by discarding the design is the one place this
+            # product's own practice loop breaks.
+            return TEMPLATES.TemplateResponse(
+                request,
+                "problem.html",
+                {
+                    "problem": service.get_problem(problem_id),
+                    "history": service.history(DEFAULT_LEARNER, problem_id),
+                    "progress": service.progress(DEFAULT_LEARNER, problem_id),
+                    "error": str(exc),
+                    "kind": kind,
+                    "submitted": submitted,
+                },
+                status_code=400,
+            )
         attempt = service.start_attempt(DEFAULT_LEARNER, problem_id)
         service.submit(attempt.id, submission)
         return RedirectResponse("/attempts/" + attempt.id, status_code=303)
@@ -160,9 +191,10 @@ def _router() -> APIRouter:
     def retry(request: Request, attempt_id: str):
         service = _service(request)
         attempt = service.get_attempt(attempt_id)
-        if attempt.status is AttemptStatus.FAILED:
-            service.retry_evaluation(attempt_id)
-        elif attempt.status not in (AttemptStatus.EVALUATING, AttemptStatus.EVALUATED):
+        # FAILED is not in this tuple, so it is already covered. This used to be an
+        # if/elif with identical bodies whose first branch could never change the
+        # outcome of the second.
+        if attempt.status not in (AttemptStatus.EVALUATING, AttemptStatus.EVALUATED):
             service.retry_evaluation(attempt_id)
         return RedirectResponse("/attempts/" + attempt_id, status_code=303)
 
