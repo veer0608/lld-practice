@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}History &middot; LLD Practice{% endblock %}
+{% block content %}
+<h1>Your attempts</h1>
+<p class="muted">Practice only counts if the second attempt is better than the first.</p>
+{% if attempts %}
+<table>
+  <tr><th>Problem</th><th>Attempt</th><th>Status</th><th>Score</th><th>Format</th><th>When</th><th></th></tr>
+  {% for a in attempts %}
+  <tr>
+    <td>{{ a.problem_id }}</td>
+    <td>#{{ a.attempt_no }}</td>
+    <td>{{ a.status.label }}</td>
+    <td>{% if a.score_percent is not none %}{{ a.score_percent }}%{% else %}&mdash;{% endif %}</td>
+    <td class="muted">{{ a.submission.kind if a.submission else '&mdash;' }}</td>
+    <td class="muted">{{ a.created_at.strftime('%d %b %H:%M') }}</td>
+    <td><a href="/attempts/{{ a.id }}">open</a></td>
+  </tr>
+  {% endfor %}
+</table>
+{% else %}
+<div class="card"><p class="muted" style="margin:0">Nothing yet. <a href="/">Pick a problem.</a></p></div>
+{% endif %}
+{% endblock %}

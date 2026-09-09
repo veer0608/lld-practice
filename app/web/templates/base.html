@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}LLD Practice{% endblock %}</title>
+<style>
+  :root {
+    --bg: #10131a;
+    --panel: #171b24;
+    --panel-2: #1d222d;
+    --line: #2a3140;
+    --ink: #e6e9ef;
+    --muted: #98a2b3;
+    --accent: #7aa2f7;
+    --good: #7ec699;
+    --warn: #e0af68;
+    --bad: #f27b7b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 15px/1.55 ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  header {
+    border-bottom: 1px solid var(--line); padding: 14px 24px;
+    display: flex; gap: 20px; align-items: baseline;
+  }
+  header .brand { font-weight: 650; letter-spacing: .2px; }
+  header nav { display: flex; gap: 16px; font-size: 14px; }
+  main { max-width: 940px; margin: 0 auto; padding: 28px 24px 72px; }
+  h1 { font-size: 26px; margin: 0 0 6px; }
+  h2 { font-size: 17px; margin: 30px 0 12px; }
+  .muted { color: var(--muted); }
+  .card {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 10px; padding: 16px 18px; margin-bottom: 14px;
+  }
+  .card h3 { margin: 0 0 4px; font-size: 16px; }
+  .row { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+  .pill {
+    font-size: 12px; padding: 2px 9px; border-radius: 999px;
+    border: 1px solid var(--line); background: var(--panel-2); color: var(--muted);
+  }
+  .pill.good { color: var(--good); border-color: #2f4a3b; }
+  .pill.warn { color: var(--warn); border-color: #4d3f24; }
+  .pill.bad { color: var(--bad); border-color: #4d2b2b; }
+  ul.reqs { margin: 8px 0 0; padding-left: 20px; }
+  ul.reqs li { margin: 3px 0; }
+  textarea, input, select {
+    width: 100%; background: var(--panel-2); color: var(--ink);
+    border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px;
+    font: 13px/1.5 ui-monospace, "SF Mono", Consolas, monospace;
+  }
+  label { display: block; font-size: 13px; color: var(--muted); margin: 14px 0 5px; }
+  button {
+    background: var(--accent); color: #0d1117; border: 0; border-radius: 8px;
+    padding: 10px 18px; font-weight: 600; font-size: 14px; cursor: pointer;
+  }
+  button.secondary { background: var(--panel-2); color: var(--ink); border: 1px solid var(--line); }
+  .score { font-size: 34px; font-weight: 680; }
+  .bars { display: grid; gap: 8px; margin-top: 6px; }
+  .bar-row { display: grid; grid-template-columns: 190px 1fr 44px; align-items: center; gap: 12px; font-size: 13px; }
+  .track { background: var(--panel-2); border-radius: 999px; height: 8px; overflow: hidden; }
+  .fill { height: 100%; background: var(--accent); }
+  .item { border-left: 3px solid var(--line); padding: 10px 0 10px 14px; margin: 12px 0; }
+  .item.gap { border-color: var(--bad); }
+  .item.suggestion { border-color: var(--warn); }
+  .item.strength { border-color: var(--good); }
+  .item .meta { font-size: 12px; color: var(--muted); margin-bottom: 3px; display: flex; gap: 8px; }
+  .item .evidence { font: 12px/1.5 ui-monospace, Consolas, monospace; color: var(--muted); margin-top: 5px; }
+  .banner { border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; margin-bottom: 16px; }
+  .banner.warn { border-color: #4d3f24; background: #241d0f; color: var(--warn); }
+  .banner.bad { border-color: #4d2b2b; background: #241313; color: var(--bad); }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 500; font-size: 13px; }
+  code { background: var(--panel-2); padding: 1px 5px; border-radius: 4px; font-size: 12.5px; }
+  .spark { display: flex; gap: 4px; align-items: flex-end; height: 34px; }
+  .spark div { width: 12px; background: var(--accent); border-radius: 2px 2px 0 0; min-height: 2px; }
+</style>
+</head>
+<body>
+<header>
+  <span class="brand">LLD Practice</span>
+  <nav>
+    <a href="/">Problems</a>
+    <a href="/history">History</a>
+  </nav>
+</header>
+<main>
+{% block content %}{% endblock %}
+</main>
+</body>
+</html>

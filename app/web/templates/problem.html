@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}{{ problem.title }} &middot; LLD Practice{% endblock %}
+{% block content %}
+<h1>{{ problem.title }}</h1>
+<span class="pill">{{ problem.difficulty }}</span>
+{% for tag in problem.tags %}<span class="pill">{{ tag }}</span>{% endfor %}
+
+<div class="card" style="margin-top:16px">
+  {% for para in problem.statement.split('\n\n') %}<p>{{ para }}</p>{% endfor %}
+  <strong>Requirements</strong>
+  <ul class="reqs">
+    {% for r in problem.requirements %}<li>{{ r }}</li>{% endfor %}
+  </ul>
+</div>
+
+{% if progress %}
+<h2>Your scores on this problem</h2>
+<div class="card">
+  <div class="spark">
+    {% for score in progress %}<div style="height: {{ (score * 0.34)|round|int }}px" title="{{ score }}%"></div>{% endfor %}
+  </div>
+  <p class="muted" style="margin:8px 0 0">
+    {{ progress|length }} scored attempt{{ '' if progress|length == 1 else 's' }},
+    latest {{ progress[-1] }}%.
+  </p>
+</div>
+{% endif %}
+
+<h2>Your design</h2>
+<form method="post" action="/problems/{{ problem.id }}/submit">
+  <label for="kind">Format</label>
+  <select name="kind" id="kind" onchange="switchFormat(this.value)">
+    <option value="design">Class design (recommended)</option>
+    <option value="code">Python code</option>
+    <option value="text">Free text</option>
+  </select>
+
+  <div id="pane-design">
+    <label for="design">One class per line &mdash;
+      <code>Name: responsibility | methods | collaborators</code></label>
+    <textarea name="design" id="design" rows="10"
+      placeholder="ParkingLot: owns floors and answers availability | park, is_full | Floor, Ticket
+Floor: holds the spots on one level | find_free_spot | ParkingSpot"></textarea>
+
+    <label for="trade_offs">The trade-off you made, and what you gave up</label>
+    <textarea name="trade_offs" id="trade_offs" rows="3"
+      placeholder="Chose one central allocator over per-floor allocators: simpler to reason about, but it is a single point of contention."></textarea>
+
+    <label for="notes">Anything else (optional)</label>
+    <textarea name="notes" id="notes" rows="2"></textarea>
+  </div>
+
+  <div id="pane-code" hidden>
+    <label for="code">Python</label>
+    <textarea name="code" id="code" rows="14" placeholder="class ParkingLot:
+    ..."></textarea>
+  </div>
+
+  <div id="pane-text" hidden>
+    <label for="text">Describe your design</label>
+    <textarea name="text" id="text" rows="12"></textarea>
+  </div>
+
+  <p style="margin-top:18px"><button type="submit">Submit for feedback</button></p>
+</form>
+
+{% if history %}
+<h2>Previous attempts</h2>
+<table>
+  <tr><th>Attempt</th><th>Status</th><th>Score</th><th>When</th><th></th></tr>
+  {% for a in history %}
+  <tr>
+    <td>#{{ a.attempt_no }}</td>
+    <td>{{ a.status.label }}</td>
+    <td>{% if a.score_percent is not none %}{{ a.score_percent }}%{% else %}&mdash;{% endif %}</td>
+    <td class="muted">{{ a.created_at.strftime('%d %b %H:%M') }}</td>
+    <td><a href="/attempts/{{ a.id }}">open</a></td>
+  </tr>
+  {% endfor %}
+</table>
+{% endif %}
+
+<script>
+function switchFormat(kind) {
+  for (const name of ['design', 'code', 'text']) {
+    document.getElementById('pane-' + name).hidden = (name !== kind);
+  }
+}
+</script>
+{% endblock %}

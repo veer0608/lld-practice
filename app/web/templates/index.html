@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Practice Low-Level Design</h1>
+<p class="muted">Pick a problem, write the classes and what each is responsible for,
+and get feedback you can argue with. Every observation cites your own words.</p>
+
+<h2>Problems</h2>
+{% for problem in problems %}
+<div class="card">
+  <div class="row">
+    <div>
+      <h3><a href="/problems/{{ problem.id }}">{{ problem.title }}</a></h3>
+      <span class="muted">{{ problem.requirements|length }} requirements &middot;
+        {{ problem.rubric|length }} rubric checks</span>
+    </div>
+    <span class="pill">{{ problem.difficulty }}</span>
+  </div>
+</div>
+{% endfor %}
+
+{% if attempts %}
+<h2>Recent attempts</h2>
+<table>
+  <tr><th>Problem</th><th>Attempt</th><th>Status</th><th>Score</th><th></th></tr>
+  {% for a in attempts %}
+  <tr>
+    <td>{{ a.problem_id }}</td>
+    <td>#{{ a.attempt_no }}</td>
+    <td>{{ a.status.label }}</td>
+    <td>{% if a.score_percent is not none %}{{ a.score_percent }}%{% else %}&mdash;{% endif %}</td>
+    <td><a href="/attempts/{{ a.id }}">open</a></td>
+  </tr>
+  {% endfor %}
+</table>
+{% endif %}
+{% endblock %}
