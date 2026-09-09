@@ -1,105 +1,110 @@
 # Research note
 
-## The learner's actual problem
+## The problem
 
-LLD practice is cheap to start and almost impossible to finish. A learner can
-sit down with "design a parking lot", produce six classes in twenty minutes,
-and then stop, because there is nothing to tell them whether those six classes
-were any good. The loop terminates at the point where learning would begin.
+LLD practice is easy to start and hard to actually finish. Someone sits down
+with "design a parking lot," has six classes on the page in twenty minutes,
+and then just stops, because nothing tells them whether those six classes
+were any good. The loop ends right where the learning was supposed to start.
 
-This is different from algorithm practice in one specific way, and every design
-decision in this project follows from it: **an algorithm problem has a unique
-correct output and an LLD problem does not.** `two_sum` either returns the right
-indices or it does not, so a test suite is a complete oracle. A parking lot can
-be modelled with a `SpotAllocator` or with allocation on `Floor`, and both can
-be defensible. There is no test to write.
+That's genuinely different from practicing algorithms, and it's the reason
+every decision in this project ended up the way it did: an algorithm problem
+has one correct output, an LLD problem doesn't. `two_sum` either returns the
+right indices or it doesn't, so a test suite is a complete answer key. A
+parking lot can be modeled with a `SpotAllocator`, or with allocation living
+directly on `Floor`, and both hold up. There's no test you can write to settle
+it.
 
-So the learner is stuck with three unsatisfying options: read a reference
-solution and hope they can tell the difference, ask a person, or ask a model
-and be told they did well.
+So a learner ends up with three options, none of them great: read someone
+else's reference solution and try to guess what they got right, find a person
+to review it, or ask a model and get told it looks good. The real failure
+here isn't a shortage of problems, there are plenty of those for free. It's
+that nothing about one attempt is comparable to anything else, including your
+own last attempt.
 
-The failure is not a lack of problems. Problems are abundant and free. The
-failure is that **nothing about an attempt is comparable to anything else**,
-including the learner's own previous attempt.
+## What's already out there
 
-## What already exists
+This is desk research, not interviews. Two days doesn't leave room for the
+latter, and it seemed more honest to say that than to write around it.
 
-Desk research, not user interviews. Two days did not allow for the latter, and
-saying so is more useful than implying a study happened.
-
-| Approach | Example | What it does well | Where it stops |
+| Approach | Example | Where it's strong | Where it stops |
 |---|---|---|---|
-| Algorithmic autograders | LeetCode, HackerRank | Instant, objective, repeatable. The oracle is free. | The oracle only exists because the answer is unique. No LLD equivalent. |
-| Curated reference solutions | Grokking the OO Design Interview, educational LLD repos | Genuinely good reference designs, well explained. | Read-only. No submission, no feedback. The learner grades themselves against one answer, which teaches recall of that answer. |
-| Human mock interviews | Pramp, Exponent, paid mentors | The best feedback that exists. A person can follow reasoning. | Scarce, expensive, scheduled. Not available at 11pm on the fourth attempt, which is when practice actually happens. |
-| Diagram tools | Excalidraw, Whimsical, PlantUML | Capture the artifact cleanly. | Judge nothing. A diagram tool has no opinion. |
-| Direct LLM chat | ChatGPT, Claude, Gemini | The strongest current substitute. Free, instant, unlimited, and it can genuinely reason about responsibility placement. | Three specific problems, below. |
+| Algorithmic autograders | LeetCode, HackerRank | Instant, objective, free to run repeatedly | Only works because the answer is unique. Nothing like it exists for LLD. |
+| Curated reference solutions | Grokking the OO Design Interview, various LLD repos | Genuinely well-explained reference designs | Read-only. No submission, no feedback loop. You grade yourself against one answer, which mostly just teaches you to recall that answer. |
+| Human mock interviews | Pramp, Exponent, paid mentors | The best feedback available, a person can actually follow your reasoning | Scarce, expensive, has to be scheduled. Not there at 11pm on your fourth attempt, which is usually when the actual practicing happens. |
+| Diagram tools | Excalidraw, Whimsical, PlantUML | Capture the design cleanly | Judge nothing at all. A diagram tool has no opinion on what you drew. |
+| Direct LLM chat | ChatGPT, Claude, Gemini | The strongest thing available today. Free, instant, no limit, and it can genuinely reason about where responsibility belongs | Three specific problems, below |
 
-Direct LLM chat deserves its own paragraph, because it is what a motivated
-learner uses today and any new product has to beat it rather than ignore it.
+Direct LLM chat gets its own paragraph because it's what a motivated learner
+is actually using right now, and any new product has to be better than it,
+not just different from it.
 
-1. **Nothing is comparable across attempts.** A fresh chat has no rubric and no
-   memory. Attempt 2 is judged by different implicit standards than attempt 1,
-   so a learner cannot tell improvement from a friendlier reply.
-2. **It is agreeable.** Free-form review drifts towards praise. A learner
-   optimising for the response learns to write designs that read well.
-3. **It is unfalsifiable.** When a model says "your `PricingStrategy` should not
-   depend on `Payment`", the learner has no way to check whether they wrote that
-   or whether the model imagined it. Both happen. Invented critique is worse
-   than no critique, because the learner acts on it.
+It has three problems. Nothing carries over between attempts: a fresh chat
+has no rubric and no memory, so attempt 2 gets judged by whatever the model
+feels like that day, and you can't tell real improvement from the model just
+being in a better mood. It's agreeable by default: free-form review tends
+toward praise, and if you're optimizing for the response you learn to write
+designs that read well rather than designs that hold up. And it's
+unfalsifiable: when it tells you "your `PricingStrategy` shouldn't depend on
+`Payment`," you have no way to check whether you actually wrote that or the
+model just imagined it. Both happen in practice, and invented critique is
+worse than no critique because you'll act on it either way.
 
-## The gaps worth building into
+## Where the actual gaps are
 
-1. **No shared submission format.** Prose and code and diagrams are all
-   accepted by a human reviewer, and none of them are comparable to each other
-   or checkable by a machine.
-2. **No stable rubric per problem.** Without one, a score is a mood.
-3. **Feedback that cannot be traced back to what the learner wrote.**
-4. **No record of improvement**, which is the only outcome that matters and the
-   only one nothing currently measures.
+Four things stood out. There's no shared submission format, so prose, code,
+and diagrams all get treated the same by a human reviewer but none of them
+are comparable to each other or checkable by a machine. There's no stable
+rubric per problem, so a score is really just a mood. Feedback usually can't
+be traced back to anything specific the learner wrote. And nothing records
+improvement over time, which is honestly the only outcome that matters here
+and the one thing nobody currently measures.
 
-## Product direction
+## Where this points the product
 
-The platform's job is not to grade an LLD design. Grading implies a right
-answer, and the whole premise is that there is not one.
+This platform's job isn't to grade an LLD design. Grading implies there's a
+right answer, and the whole point above is that there usually isn't one.
 
-Its job is narrower and more achievable: **make attempts comparable over time,
-and make every piece of feedback checkable.** Four commitments follow.
+The narrower, more honest job is making attempts comparable to each other and
+making every piece of feedback something you can check. Four things follow
+from that.
 
-**Structure the submission, not the solution.** The learner is asked for named
-classes, a stated responsibility per class, stated collaborators, and the
-trade-off they knowingly made. Not a specific design. The format is what makes
-comparison possible; the content stays entirely theirs. Free prose is still
-accepted, and the platform says out loud that it will get shallower feedback,
-because the alternative is silently scoring it lower.
+The submission gets structured, not the solution. A learner has to name
+classes, give each one a stated responsibility, name the collaborators, and
+say what trade-off they made. Not a specific design, just that shape. The
+structure is what makes comparison possible; what goes inside it is still
+entirely theirs. Free prose is still accepted, and it's told up front that
+it'll get shallower feedback, since the alternative (scoring it lower without
+saying why) is worse.
 
-**Fix a rubric per problem, and show it.** Every problem carries explicit
-criteria. Criteria accept synonyms, because penalising a learner for writing
-`Bay` instead of `Spot` is exactly the failure that makes automated review
-useless. A fixed rubric is what makes attempt 4 comparable to attempt 1.
+Each problem gets a fixed rubric, and the rubric is visible. Criteria accept
+synonyms, because docking someone for writing `Bay` instead of `Spot` is
+exactly the kind of failure that makes automated review pointless. A fixed
+rubric is also what actually makes attempt 4 comparable to attempt 1.
 
-**Split evaluation by what kind of question it is.** Coverage, presence,
-structure and parse errors are facts, and facts get a deterministic checker
-that costs nothing and returns the same answer tomorrow. Whether an abstraction
-earns its place is a judgement, and judgement gets a model. Every observation is
-labelled with which produced it, so a learner can weight them differently, and
-should.
+Evaluation splits by what kind of question is being asked. Coverage,
+presence, structure, parse errors: these are facts, and facts get a
+deterministic checker that costs nothing and gives the same answer tomorrow.
+Whether an abstraction earns its place is a judgement call, so that goes to a
+model. Every piece of feedback says which one produced it, so a learner can
+trust them differently, and should.
 
-**Require evidence, and drop what cannot show it.** A model observation whose
-quote does not appear in the submission is discarded before the learner sees it,
-and the count of what was withheld is shown. This is the cheapest available
-defence against invented critique, and it runs on our side rather than trusting
-the model to behave.
+And evidence is required, not optional. If a model observation's quote
+doesn't actually appear in the submission, it gets dropped before the learner
+ever sees it, and the count of what got dropped is shown. It's the cheapest
+real defense against invented critique there is, and it runs on our side
+rather than hoping the model behaves.
 
-**Make improvement the visible outcome.** History and a score trend per problem
-are first-class, not a settings page. The product's claim is that attempt 3
-should be better than attempt 1, so that number is the one on the screen.
+Improvement is the thing you actually see. History and a score trend per
+problem live on the main screen, not buried in settings, because the whole
+claim this product makes is that attempt 3 should beat attempt 1, and that
+needs to be the number you're looking at.
 
-## What this direction gives up
+## What this costs
 
-It will under-reward an unusual but excellent design, because keyword coverage
-cannot recognise originality. That is a real cost, and it is bounded: the
-deterministic half can only ever mark a concept present or absent, the model
-half is what is allowed to have an opinion, and the learner can see which is
-which. A product that hid that split would be claiming an authority it does not
-have.
+An unusual but genuinely excellent design will score lower than it deserves,
+because keyword coverage can't recognize originality. That's a real cost. It's
+also a bounded one: the deterministic half can only ever say a concept is
+present or absent, the model half is the only one allowed to have an opinion,
+and a learner can see which is which on every line. Hiding that split would
+be claiming more authority than the system actually has.
