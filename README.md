@@ -138,7 +138,7 @@ that knows SQL.
 The split that everything else follows from: whether a concept is named at
 all is a fact, and facts get a checker that costs nothing and gives the same
 answer tomorrow. Whether an abstraction actually earns its place is a
-judgement call, and judgement calls go to the model.
+judgement call, so that's the model's job.
 
 Because of that split, the rubric is required and the model is optional. If a
 required evaluator fails, the attempt fails. If the optional one fails, the
