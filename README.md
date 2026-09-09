@@ -8,7 +8,7 @@ Built for the CipherSchools 2-day engineering assignment.
 
 - [Research note](docs/RESEARCH.md) - the learner problem, what already exists, and where the gaps are
 - [Design note](docs/DESIGN.md) - MVP, class model, evaluation approach, trade-offs
-- [AI usage](AI_USAGE.md) - five decisions where AI and judgement diverged
+- [AI usage](AI_USAGE.md) - five places Claude's first answer and mine diverged
 
 ## Run it
 
@@ -44,30 +44,31 @@ API key in `GEMINI_API_KEY`. `GET /healthz` reports which evaluators are wired:
 python -m pytest -q
 ```
 
-69 tests, about 1.3 seconds, no network and no database. The LLM evaluator is
-tested against a fake client, so what is under test is our handling of what a
-model returns: fenced JSON, prose around the object, invented evidence, unknown
-dimension names, an exhausted quota.
+87 tests, under 2 seconds, no network and no database. The LLM evaluator is
+tested against a fake client rather than the real API, so what's actually
+under test is our handling of what a model returns: fenced JSON, prose around
+the object, invented evidence, unknown dimension names, an exhausted quota.
 
 ## What it does
 
-**Three problems** (Parking Lot, Elevator Controller, Vending Machine), each
-with requirements and an explicit rubric.
+Three problems ship: Parking Lot, Elevator Controller, Vending Machine. Each
+has requirements and an explicit rubric behind it.
 
-**Three submission formats.** A structured class design is the primary one:
-class name, responsibility, methods, collaborators, one per line, plus the
-trade-off you made. Python code is accepted and read through the AST, so a
-class named only in a comment does not count. Free prose is accepted and told
-it will get shallower feedback.
+You submit in one of three formats. The main one is a structured class
+design: name, responsibility, methods, collaborators, one class per line,
+plus the trade-off you made. Python code is also accepted and read through
+the AST, so a class name in a comment doesn't count as having named it. Free
+prose works too, but it's told up front that it gets shallower feedback.
 
-**Two evaluators, kept apart where it matters.** A deterministic rubric checker
-and a model. Observations are merged and each is labelled with its source, but
-the scores are not blended into one headline: the page shows
-`rubric 90% - llm 75% (varies between runs)`, and the trend plots the
-reproducible score alone.
+Two evaluators look at what you submit: a deterministic rubric checker and a
+model. Their observations get merged and each one is labelled with where it
+came from, but the scores themselves aren't blended into a single headline.
+The page shows `rubric 90% - llm 75% (varies between runs)`, and the trend
+line only ever plots the reproducible half.
 
-**Attempt history and a score trend per problem**, because the product's claim
-is that the second attempt is better than the first.
+There's attempt history and a score trend per problem, because the whole
+point of the product is that your second attempt should be better than your
+first, and that has to be something you can actually see.
 
 ## A real run
 
@@ -123,7 +124,7 @@ app/
   services/      PracticeService, the practice loop. Orchestrates, does not decide.
   content/       The problem catalogue and its rubrics.
   web/           FastAPI routes, form parsing, Jinja templates.
-tests/           69 tests
+tests/           87 tests
 docs/            Research and design notes
 .claude/skills/  Two repo skills: domain-design, lld-evaluator
 ```
@@ -134,46 +135,57 @@ that knows SQL.
 
 ## Key decisions
 
-**Deterministic where the answer is a fact, a model where it is a judgement.**
-Whether a concept is named is a fact and gets a checker that costs nothing and
-returns the same answer tomorrow. Whether an abstraction earns its place is a
-judgement and gets a model.
+The split that everything else follows from: whether a concept is named at
+all is a fact, and facts get a checker that costs nothing and gives the same
+answer tomorrow. Whether an abstraction actually earns its place is a
+judgement call, and judgement calls go to the model.
 
-**The rubric is required, the model is optional.** A required evaluator failing
-fails the attempt; an optional one failing degrades it with a reason shown. A
-learner never watches a spinner that ends in nothing.
+Because of that split, the rubric is required and the model is optional. If a
+required evaluator fails, the attempt fails. If the optional one fails, the
+result just gets marked degraded with a reason attached. A learner should
+never be staring at a spinner that's never going to resolve.
 
-**Model observations must be grounded in the submission's own vocabulary.** `_evidence_supported` drops any item whose quoted evidence does not sufficiently overlap the words the learner actually wrote, and reports the withheld count. It reliably catches critique of classes the learner never named, which is the common failure. It is a word-overlap test rather than a substring match, so a fabricated sentence assembled from the learner's own vocabulary can still pass, and a quote of fewer than three significant words is waved through unchecked on the grounds that it carries no signal either way. Substring matching against the rendered submission would close both, and is the next thing to change here.
+Model output gets checked, not trusted outright. `_evidence_supported` drops
+any observation whose quoted evidence doesn't overlap enough with words the
+learner actually wrote, and tells the learner how many got dropped. It's
+reliable at catching the common failure, critique of a class that was never
+named, but it's honestly a word-overlap check rather than a real quote match,
+so a sentence assembled from the learner's own vocabulary can slip through,
+and anything under three significant words is waved through unchecked because
+it carries no signal either way. Substring matching against the rendered
+submission would fix both and is the next thing I'd change.
 
-**Evaluation is off the request thread.** `EVALUATING` is a persisted state, not
-the duration of an HTTP request, so the page is safe to leave. A failed
-evaluation keeps the submission and offers a retry that costs nothing.
+And evaluation runs off the request thread. `EVALUATING` is a state that gets
+persisted, not just however long the HTTP request happens to take, so the
+page is safe to close and come back to. A failed evaluation keeps the
+submission around and a retry costs nothing.
 
 ## Limitations
 
-- **Single learner.** The id is fixed at the web layer. Every service call
-  already takes `learner_id`, so a real session drops in there and nowhere else.
-- **Keyword matching under-rewards unusual designs.** It is half the score, and
-  which half is labelled on every item.
-- **A thread pool, not a queue.** Evaluation does not survive a restart;
-  `resume_pending` re-schedules stranded attempts at startup instead.
-- **Python only for code submissions.** Other languages fall back to word
-  matching rather than AST symbols.
-- **The rubric was written by me**, not validated against how experienced
-  reviewers actually grade. That is the first thing worth measuring.
-- **No problem authoring UI.** Problems are data in `app/content/problems.py`.
-- **The rubric half is gameable.** A design that names every rubric keyword as a
-  class scores 100% on the deterministic half with nonsense responsibilities.
-  Keyword presence is evidence of coverage, never of quality, and only the model
-  half reads what the responsibilities actually say.
-- **Prose submissions bypass the `TYPE_NAME` scope.** `TextSubmission` cannot
-  tell a type from a verb, so `declared_types()` falls back to every word and a
-  paragraph mentioning the right nouns scores far higher than it should. Design
-  and code submissions are unaffected.
-- **The god-class check needs listed methods.** Omitting the methods column
-  silences it, because it measures method distribution and has nothing to count.
-- **The model half of the score drifts between runs**, by a few points on an
-  unchanged submission. This no longer reaches the trend: the headline and the
-  sparkline use the reproducible score alone, and the model score is shown
-  beside it labelled `varies between runs`. What remains is that model feedback
-  *text* still varies, so two runs of the same design can raise different points.
+- Single learner. The id is hardcoded at the web layer, though every service
+  call already takes `learner_id`, so a real session only needs adding there.
+- Keyword matching under-rewards an unusual design. It's half the score, and
+  which half is labelled on every item, but it's still a real gap, and the
+  next one down is worse: a design that names every rubric keyword as a
+  class, with nonsense written for each responsibility, scores 100% on the
+  deterministic half. Keyword presence tells you coverage, never quality.
+- Prose submissions get around the `TYPE_NAME` scope, since free text can't
+  tell a type from a verb, so `declared_types()` falls back to matching every
+  word. A paragraph that happens to mention the right nouns scores higher
+  than it should. Design and code submissions don't have this problem.
+- The god-class check needs the methods column filled in. Leave it blank and
+  the check has nothing to measure, so it stays quiet.
+- The model's half of the score still drifts a few points between runs on an
+  identical submission. That no longer reaches the number that matters (the
+  headline and trend line both use the reproducible score only, with the
+  model's score shown next to it labelled `varies between runs`), but the
+  model's feedback *text* can still change, so rereading the same design
+  twice can surface different points.
+- It's a thread pool, not a queue, so evaluation doesn't survive a restart on
+  its own. `resume_pending` picks up stranded attempts at startup instead.
+- Code submissions only really work for Python. Other languages fall back to
+  plain word matching instead of reading actual AST symbols.
+- No UI for authoring problems, they're just data in `app/content/problems.py`.
+- I wrote the rubric myself and haven't checked it against how an experienced
+  reviewer would actually grade these designs. That's the first thing I'd
+  want to measure next.
