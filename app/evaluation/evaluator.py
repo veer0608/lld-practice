@@ -41,6 +41,12 @@ class Evaluator(ABC):
 
     name: str = "evaluator"
 
+    #: Does this evaluator return the same score for the same submission every
+    #: time? Only reproducible scores go into the learner's trend, because a
+    #: score that drifts draws improvement that did not happen. Default False:
+    #: an evaluator has to claim this, rather than have it assumed.
+    reproducible: bool = False
+
     @abstractmethod
     def evaluate(self, problem: Problem, submission: Submission) -> Evaluation:
         """Return feedback, or raise EvaluationError."""

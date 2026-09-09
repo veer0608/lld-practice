@@ -17,7 +17,7 @@ worst case is weaker feedback with an honest label on it, not a dead end.
 
 from __future__ import annotations
 
-from app.domain.feedback import Evaluation
+from app.domain.feedback import Evaluation, SourceScore
 from app.domain.problem import Problem
 from app.domain.submission import Submission
 
@@ -41,7 +41,7 @@ class EvaluationPipeline(Evaluator):
         result = Evaluation()
 
         for evaluator in self.required:
-            result = result.merge(evaluator.evaluate(problem, submission))
+            result = result.merge(self._run(evaluator, problem, submission))
 
         for evaluator in self.optional:
             if not evaluator.is_available:
@@ -52,7 +52,7 @@ class EvaluationPipeline(Evaluator):
                 )
                 continue
             try:
-                result = result.merge(evaluator.evaluate(problem, submission))
+                result = result.merge(self._run(evaluator, problem, submission))
             except EvaluationError as exc:
                 result.degraded = True
                 result.degraded_reason = self._join(
@@ -68,6 +68,26 @@ class EvaluationPipeline(Evaluator):
         if not result.scores and not result.items:
             raise EvaluationError("No evaluator produced a result.", retryable=True)
         return result
+
+    @staticmethod
+    def _run(evaluator: Evaluator, problem: Problem, submission: Submission) -> Evaluation:
+        """Run one evaluator and record what it scored, before anything merges.
+
+        Merging averages per dimension, which is the right view for the bars and
+        the wrong one for a headline: it blends a coverage fraction with a
+        model's judgement into a number that is neither. Capturing each
+        evaluator's own score here is what lets the UI show both.
+        """
+        outcome = evaluator.evaluate(problem, submission)
+        outcome.contributions = outcome.contributions or [
+            SourceScore(
+                source=evaluator.name,
+                score=outcome.overall,
+                dimensions=len(outcome.scores),
+                reproducible=evaluator.reproducible,
+            )
+        ]
+        return outcome
 
     @staticmethod
     def _join(existing: str, addition: str) -> str:

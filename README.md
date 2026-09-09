@@ -60,8 +60,11 @@ trade-off you made. Python code is accepted and read through the AST, so a
 class named only in a comment does not count. Free prose is accepted and told
 it will get shallower feedback.
 
-**Two evaluators, merged.** A deterministic rubric checker and a model, each
-labelled on every observation so you can weight them differently.
+**Two evaluators, kept apart where it matters.** A deterministic rubric checker
+and a model. Observations are merged and each is labelled with its source, but
+the scores are not blended into one headline: the page shows
+`rubric 90% - llm 75% (varies between runs)`, and the trend plots the
+reproducible score alone.
 
 **Attempt history and a score trend per problem**, because the product's claim
 is that the second attempt is better than the first.
@@ -169,8 +172,8 @@ evaluation keeps the submission and offers a retry that costs nothing.
   and code submissions are unaffected.
 - **The god-class check needs listed methods.** Omitting the methods column
   silences it, because it measures method distribution and has nothing to count.
-- **Scores drift by a few points between runs.** The rubric half is exactly
-  reproducible; the model half is not. Measured on one unchanged submission:
-  rubric 90% every time, merged score between 82% and 87% across four runs. A
-  19-point improvement is real signal, a 3-point one is not distinguishable from
-  noise, and the sparkline does not currently say so.
+- **The model half of the score drifts between runs**, by a few points on an
+  unchanged submission. This no longer reaches the trend: the headline and the
+  sparkline use the reproducible score alone, and the model score is shown
+  beside it labelled `varies between runs`. What remains is that model feedback
+  *text* still varies, so two runs of the same design can raise different points.

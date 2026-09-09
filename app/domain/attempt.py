@@ -127,4 +127,11 @@ class Attempt:
 
     @property
     def score_percent(self) -> int | None:
-        return self.evaluation.overall_percent if self.evaluation else None
+        """The number the trend plots: reproducible where there is one.
+
+        Not the merged score. Merging averages a coverage fraction with a
+        model's judgement, and the model half moves a few points on an unchanged
+        submission, so a trend built from it draws improvement that did not
+        happen.
+        """
+        return self.evaluation.trend_percent if self.evaluation else None

@@ -41,9 +41,21 @@
   <div class="card">
     <div class="row">
       <div>
-        <div class="score">{{ ev.overall_percent }}%</div>
+        <div class="score">{{ ev.trend_percent }}%</div>
+        {% if ev.contributions|length > 1 %}
+        <span class="muted">
+          {% for c in ev.contributions %}{% if not loop.first %} &middot; {% endif %}{{ c.source }}
+            {{ c.percent }}%{% if not c.reproducible %} (varies between runs){% endif %}{% endfor %}
+        </span>
+        <p class="muted" style="margin:6px 0 0;font-size:13px">
+          The trend above uses the reproducible score only. A model score moves a
+          few points on an unchanged design, so plotting it would draw
+          improvement that did not happen.
+        </p>
+        {% else %}
         <span class="muted">across {{ ev.scores|length }} dimensions &middot;
           sources: {{ ev.sources|join(', ') }} &middot; {{ ev.duration_ms }}ms</span>
+        {% endif %}
       </div>
       {% if progress|length > 1 %}
       <div style="text-align:right">

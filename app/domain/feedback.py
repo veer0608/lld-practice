@@ -42,6 +42,26 @@ class FeedbackItem:
 
 
 @dataclass(frozen=True)
+class SourceScore:
+    """What one evaluator scored, kept separately from the merged view.
+
+    Averaging a coverage fraction with a model's judgement produces a number
+    that is neither, and hides which half moved. Recording each contribution
+    lets the UI show a headline a learner can actually act on and lets the score
+    trend be built from the reproducible half alone.
+    """
+
+    source: str
+    score: float
+    dimensions: int = 0
+    reproducible: bool = False
+
+    @property
+    def percent(self) -> int:
+        return round(self.score * 100)
+
+
+@dataclass(frozen=True)
 class DimensionScore:
     """A 0..1 score on one axis, with the count it was derived from."""
 
@@ -63,6 +83,7 @@ class Evaluation:
     scores: list[DimensionScore] = field(default_factory=list)
     summary: str = ""
     sources: list[str] = field(default_factory=list)
+    contributions: list[SourceScore] = field(default_factory=list)
     degraded: bool = False
     degraded_reason: str = ""
     duration_ms: int = 0
@@ -82,6 +103,35 @@ class Evaluation:
     @property
     def overall_percent(self) -> int:
         return round(self.overall * 100)
+
+    @property
+    def comparable(self) -> float | None:
+        """The score that means the same thing on every attempt.
+
+        Only reproducible evaluators count. The model half is worth reading and
+        is shown next to this, but it moves by a few points on an unchanged
+        submission, so building a trend from it would draw improvement that did
+        not happen. None when nothing reproducible ran, which the caller shows
+        as the merged number instead.
+        """
+        scored = [c for c in self.contributions if c.reproducible]
+        if not scored:
+            return None
+        return sum(c.score for c in scored) / len(scored)
+
+    @property
+    def comparable_percent(self) -> int | None:
+        value = self.comparable
+        return None if value is None else round(value * 100)
+
+    @property
+    def trend_percent(self) -> int:
+        """What the score trend plots. Reproducible if there is one."""
+        comparable = self.comparable_percent
+        return self.overall_percent if comparable is None else comparable
+
+    def contribution(self, source: str) -> SourceScore | None:
+        return next((c for c in self.contributions if c.source == source), None)
 
     def by_severity(self, severity: Severity) -> list[FeedbackItem]:
         return [i for i in self.items if i.severity is severity]
@@ -115,6 +165,7 @@ class Evaluation:
         return Evaluation(
             items=self.items + other.items,
             scores=merged_scores,
+            contributions=self.contributions + other.contributions,
             # Both summaries, in merge order, so the deterministic one comes
             # first. Taking only the later one meant the rubric's line was
             # discarded on every run where the model succeeded, which is to say

@@ -10,7 +10,13 @@ from __future__ import annotations
 import json
 from datetime import datetime
 
-from app.domain.feedback import DimensionScore, Evaluation, FeedbackItem, Severity
+from app.domain.feedback import (
+    DimensionScore,
+    Evaluation,
+    FeedbackItem,
+    Severity,
+    SourceScore,
+)
 from app.domain.problem import Dimension
 
 
@@ -38,6 +44,15 @@ def evaluation_to_json(evaluation: Evaluation | None) -> str | None:
                     "total": s.total,
                 }
                 for s in evaluation.scores
+            ],
+            "contributions": [
+                {
+                    "source": c.source,
+                    "score": c.score,
+                    "dimensions": c.dimensions,
+                    "reproducible": c.reproducible,
+                }
+                for c in evaluation.contributions
             ],
             "summary": evaluation.summary,
             "sources": evaluation.sources,
@@ -72,6 +87,17 @@ def evaluation_from_json(raw: str | None) -> Evaluation | None:
                 total=s.get("total", 0),
             )
             for s in data.get("scores", [])
+        ],
+        # Absent on evaluations stored before contributions existed. They fall
+        # back to the merged number, which is what they were showing anyway.
+        contributions=[
+            SourceScore(
+                source=c["source"],
+                score=c["score"],
+                dimensions=c.get("dimensions", 0),
+                reproducible=c.get("reproducible", False),
+            )
+            for c in data.get("contributions", [])
         ],
         summary=data.get("summary", ""),
         sources=data.get("sources", []),

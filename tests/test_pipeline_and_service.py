@@ -260,3 +260,90 @@ def test_the_rubric_summary_survives_a_successful_model_run(problem, thin_design
 
     assert "missing from your design" in merged.summary  # the rubric's line
     assert "stub summary" in merged.summary  # and the model's
+
+
+# -- the headline score, and what the trend is allowed to plot -----------------
+
+
+def test_each_evaluator_contributes_its_own_score_unblended(problem, good_design):
+    """The merged bars are the right per-dimension view and the wrong headline.
+
+    Averaging a coverage fraction with a model's judgement gives a number that
+    is neither, so each side's own score is kept alongside it.
+    """
+    result = EvaluationPipeline(
+        required=[RubricEvaluator()], optional=[StubEvaluator(score=0.4)]
+    ).evaluate(problem, good_design)
+
+    rubric = result.contribution("rubric")
+    stub = result.contribution("stub")
+    assert rubric is not None and stub is not None
+    assert stub.percent == 40
+    assert rubric.percent != stub.percent  # not collapsed into one number
+    assert rubric.reproducible is True
+    assert stub.reproducible is False
+
+
+def test_the_trend_uses_the_reproducible_score_not_the_blend(problem, good_design):
+    result = EvaluationPipeline(
+        required=[RubricEvaluator()], optional=[StubEvaluator(score=0.0)]
+    ).evaluate(problem, good_design)
+
+    assert result.trend_percent == result.contribution("rubric").percent
+    # The blend is dragged down by the model; the trend must not be.
+    assert result.overall_percent < result.trend_percent
+
+
+def test_a_drifting_model_score_cannot_move_the_trend(problem, good_design):
+    """Same submission, a model that answers differently each time.
+
+    This is the property the whole product rests on: attempt 3 is comparable to
+    attempt 1. It only holds if the trend ignores the half that drifts.
+    """
+    trends = set()
+    for score in (0.4, 0.6, 0.9):
+        result = EvaluationPipeline(
+            required=[RubricEvaluator()], optional=[StubEvaluator(score=score)]
+        ).evaluate(problem, good_design)
+        trends.add(result.trend_percent)
+    assert len(trends) == 1
+
+
+def test_with_no_reproducible_evaluator_the_trend_falls_back_to_the_blend(
+    problem, good_design
+):
+    result = EvaluationPipeline(required=[StubEvaluator(score=0.5)]).evaluate(
+        problem, good_design
+    )
+    assert result.comparable_percent is None
+    assert result.trend_percent == result.overall_percent == 50
+
+
+def test_contributions_survive_persistence(problem, good_design):
+    from app.storage.mapping import evaluation_from_json, evaluation_to_json
+
+    result = EvaluationPipeline(
+        required=[RubricEvaluator()], optional=[StubEvaluator(score=0.4)]
+    ).evaluate(problem, good_design)
+    reloaded = evaluation_from_json(evaluation_to_json(result))
+
+    assert reloaded.trend_percent == result.trend_percent
+    assert [(c.source, c.percent, c.reproducible) for c in reloaded.contributions] == [
+        (c.source, c.percent, c.reproducible) for c in result.contributions
+    ]
+
+
+def test_an_evaluation_stored_before_contributions_existed_still_scores():
+    """Old rows have no contributions key and must not crash or read as zero."""
+    import json
+
+    from app.storage.mapping import evaluation_from_json
+
+    legacy = json.dumps({
+        "items": [],
+        "scores": [{"dimension": "requirements", "score": 0.8}],
+        "summary": "old row",
+    })
+    old = evaluation_from_json(legacy)
+    assert old.comparable_percent is None
+    assert old.trend_percent == 80

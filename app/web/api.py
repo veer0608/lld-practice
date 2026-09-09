@@ -41,6 +41,13 @@ def attempt_json(attempt: Attempt) -> dict:
         if evaluation is None
         else {
             "summary": evaluation.summary,
+            "trend": evaluation.trend_percent,
+            "comparable": evaluation.comparable_percent,
+            "merged": evaluation.overall_percent,
+            "contributions": [
+                {"source": c.source, "percent": c.percent, "reproducible": c.reproducible}
+                for c in evaluation.contributions
+            ],
             "degraded": evaluation.degraded,
             "degraded_reason": evaluation.degraded_reason,
             "sources": evaluation.sources,

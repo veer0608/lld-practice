@@ -37,6 +37,7 @@ class RubricEvaluator(Evaluator):
     """Checks a submission against the problem's rubric. No network, no model."""
 
     name = "rubric"
+    reproducible = True
 
     def evaluate(self, problem: Problem, submission: Submission) -> Evaluation:
         started = time.perf_counter()

@@ -170,12 +170,31 @@ The second design question. Four mechanisms, all in the code:
 5. **Sources stay visible.** `rubric` and `llm` are labelled separately in the
    UI so a learner can weight a mechanical check differently from an opinion.
 
-### Scoring
+### Scoring, and why there are two numbers
 
-Unweighted mean of dimension scores. Weighting one LLD axis above another is a
-product claim not yet earned, and a hidden weight makes a score impossible to
-argue with. The per-dimension bars are the real output; the single number exists
-so the sparkline has something to plot.
+Within one evaluator, an unweighted mean of dimension scores. Weighting one LLD
+axis above another is a product claim not yet earned, and a hidden weight makes
+a score impossible to argue with.
+
+Across evaluators, the scores are **not** blended into a headline. `merge`
+averages per dimension, which is the right view for the bars and the wrong one
+for a single number: the rubric produces a coverage fraction, the model produces
+a judgement, and their mean is neither. It also weights badly. `trade_offs` has
+no rubric criteria, so one model opinion entered the old headline at a full
+sixth of the score carrying all of its noise. That is what made the merged
+number move 82 to 87 across four runs of an unchanged submission while the
+rubric half returned 90 every time.
+
+So `Evaluator` declares `reproducible`, the pipeline records each contribution
+as a `SourceScore` before merging, and the attempt page shows
+`rubric 90% - llm 75% (varies between runs)`. The score trend plots
+`Evaluation.trend_percent`, which is the reproducible score alone.
+
+This is the concrete form of the product's whole claim. Attempt 3 is comparable
+to attempt 1 only if the number being compared means the same thing both times,
+and only the deterministic half does. The model half is worth reading and is
+shown; it is not something to plot. `test_a_drifting_model_score_cannot_move_the_trend`
+pins it.
 
 ## Slow and failing evaluation
 
